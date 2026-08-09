@@ -6,6 +6,8 @@
 #include "pmi8950.dtsi"
 
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/interrupt-controller/irq.h>
 
 /delete-node/ &cont_splash_mem;
 
@@ -96,6 +98,21 @@
 		};
 	};
 
+	keyboard_i2c_vreg: regulator-keyboard-i2c {
+		compatible = "regulator-fixed";
+		regulator-name = "keyboard_i2c_1p8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+
+		gpio = <&pm8953_gpios 5 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		gpio-open-drain;
+
+		regulator-always-on;
+		regulator-boot-on;
+		vin-supply = <&pm8953_l6>;
+	};
+
 	vph_pwr: vph-pwr-regulator {
 		compatible = "regulator-fixed";
 		regulator-name = "vph_pwr";
@@ -111,6 +128,65 @@
 	vdda-phy-dpdm-supply = <&pm8953_l13>;
 
 	status = "okay";
+};
+
+&i2c_8 {
+	clock-frequency = <400000>;
+
+	status = "okay";
+
+	keyboard@40 {
+		compatible = "blackberry,mercury-keypad";
+		reg = <0x40>;
+
+		interrupt-parent = <&tlmm>;
+		interrupts = <12 IRQ_TYPE_LEVEL_LOW>;
+		i2c-supply = <&keyboard_i2c_vreg>;
+		reset-gpios = <&tlmm 66
+				 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&keypad_default>;
+
+		keypad,num-rows = <8>;
+		keypad,num-columns = <8>;
+		linux,keymap = <MATRIX_KEY(3, 1, KEY_Q)
+				   MATRIX_KEY(3, 7, KEY_W)
+				   MATRIX_KEY(4, 1, KEY_E)
+				   MATRIX_KEY(5, 1, KEY_R)
+				   MATRIX_KEY(5, 4, KEY_T)
+				   MATRIX_KEY(6, 4, KEY_Y)
+				   MATRIX_KEY(6, 1, KEY_U)
+				   MATRIX_KEY(7, 4, KEY_I)
+				   MATRIX_KEY(7, 1, KEY_O)
+				   MATRIX_KEY(4, 2, KEY_P)
+				   MATRIX_KEY(3, 4, KEY_A)
+				   MATRIX_KEY(4, 7, KEY_S)
+				   MATRIX_KEY(4, 4, KEY_D)
+				   MATRIX_KEY(5, 5, KEY_F)
+				   MATRIX_KEY(5, 7, KEY_G)
+				   MATRIX_KEY(6, 7, KEY_H)
+				   MATRIX_KEY(6, 5, KEY_J)
+				   MATRIX_KEY(7, 5, KEY_K)
+				   MATRIX_KEY(7, 7, KEY_L)
+				   MATRIX_KEY(7, 2, KEY_BACKSPACE)
+				   MATRIX_KEY(3, 6, KEY_LEFTALT)
+				   MATRIX_KEY(4, 0, KEY_Z)
+				   MATRIX_KEY(4, 6, KEY_X)
+				   MATRIX_KEY(5, 0, KEY_C)
+				   MATRIX_KEY(5, 6, KEY_V)
+				   MATRIX_KEY(6, 6, KEY_B)
+				   MATRIX_KEY(6, 0, KEY_N)
+				   MATRIX_KEY(7, 0, KEY_M)
+				   MATRIX_KEY(7, 6, KEY_4)
+				   MATRIX_KEY(6, 2, KEY_ENTER)
+				   MATRIX_KEY(4, 5, KEY_LEFTSHIFT)
+				   MATRIX_KEY(3, 5, KEY_0)
+				   MATRIX_KEY(3, 0, KEY_SPACE)
+				   MATRIX_KEY(3, 2, KEY_RIGHTALT)
+				   MATRIX_KEY(5, 2, KEY_RIGHTSHIFT)>;
+		wakeup-source;
+	};
 };
 
 &mdss {
@@ -309,6 +385,23 @@
 		function = "gpio";
 		drive-strength = <2>;
 		bias-pull-down;
+	};
+
+	keypad_default: keypad-default-state {
+		keypad-interrupt-pins {
+			pins = "gpio12";
+			function = "gpio";
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+
+		keypad-reset-pins {
+			pins = "gpio66";
+			function = "gpio";
+			drive-strength = <2>;
+			bias-pull-up;
+		};
 	};
 };
 
