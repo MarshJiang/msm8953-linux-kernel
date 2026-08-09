@@ -156,6 +156,18 @@ config KEYBOARD_ATKBD_RDI_KEYCODES
 	  right-hand column will be interpreted as the key shown in the
 	  left-hand column.
 
+config KEYBOARD_BLACKBERRY
+	tristate "BlackBerry KEYone keyboard support"
+	depends on I2C
+	select INPUT_MATRIXKMAP
+	select REGMAP_I2C
+	help
+	  Say Y here to enable support for the physical keyboard controller in
+	  the BlackBerry KEYone.
+
+	  To compile this driver as a module, choose M here: the module will be
+	  called blackberry-keypad.
+
 config KEYBOARD_QT1050
 	tristate "Microchip AT42QT1050 Touch Sensor Chip"
 	depends on I2C
