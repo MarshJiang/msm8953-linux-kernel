@@ -216,6 +216,8 @@ patternProperties:
     description: Shenzhen BigTree Tech Co., LTD
   "^bitmain,.*":
     description: Bitmain Technologies
+  "^blackberry,.*":
+    description: BlackBerry Limited
   "^blutek,.*":
     description: BluTek Power
   "^boe,.*":
