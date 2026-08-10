@@ -26,8 +26,10 @@
 
 	battery: battery {
 		compatible = "simple-battery";
+		device-chemistry = "lithium-ion-polymer";
 		charge-full-design-microamp-hours = <3440000>;
-		constant-charge-current-max-microamp = <2000000>;
+		charge-term-current-microamp = <100000>;
+		constant-charge-current-max-microamp = <1000000>;
 		voltage-min-design-microvolt = <3400000>;
 		voltage-max-design-microvolt = <4400000>;
 	};
@@ -276,6 +278,19 @@
 	qcom,external-pfet;
 	qcom,ovp-millivolt = <29600>;
 	qcom,switching-freq = <800>;
+
+	status = "okay";
+};
+
+&pmi8950_fg {
+	monitored-battery = <&battery>;
+	power-supplies = <&pmi8950_smbcharger>;
+
+	status = "okay";
+};
+
+&pmi8950_smbcharger {
+	monitored-battery = <&battery>;
 
 	status = "okay";
 };
