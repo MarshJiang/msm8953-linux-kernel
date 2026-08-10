@@ -113,6 +113,18 @@
 		vin-supply = <&pm8953_l6>;
 	};
 
+	display_1p8_vreg: regulator-display-1p8 {
+		compatible = "regulator-fixed";
+		regulator-name = "display_1p8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+
+		gpio = <&tlmm 50 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
 	vph_pwr: vph-pwr-regulator {
 		compatible = "regulator-fixed";
 		regulator-name = "vph_pwr";
@@ -128,6 +140,31 @@
 	vdda-phy-dpdm-supply = <&pm8953_l13>;
 
 	status = "okay";
+};
+
+&i2c_3 {
+	clock-frequency = <400000>;
+
+	status = "okay";
+
+	touchscreen@38 {
+		compatible = "focaltech,ft5426";
+		reg = <0x38>;
+
+		interrupt-parent = <&tlmm>;
+		interrupts = <65 IRQ_TYPE_EDGE_FALLING>;
+		reset-gpios = <&tlmm 64 GPIO_ACTIVE_LOW>;
+
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&touchscreen_default>;
+		pinctrl-1 = <&touchscreen_sleep>;
+
+		iovcc-supply = <&display_1p8_vreg>;
+		vcc-supply = <&display_1p8_vreg>;
+
+		touchscreen-size-x = <1080>;
+		touchscreen-size-y = <1620>;
+	};
 };
 
 &i2c_8 {
@@ -401,6 +438,39 @@
 			function = "gpio";
 			drive-strength = <2>;
 			bias-pull-up;
+		};
+	};
+
+	touchscreen_default: touchscreen-default-state {
+		touchscreen-interrupt-pins {
+			pins = "gpio65";
+			function = "gpio";
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+
+		touchscreen-reset-pins {
+			pins = "gpio64";
+			function = "gpio";
+			drive-strength = <2>;
+			bias-pull-up;
+		};
+	};
+
+	touchscreen_sleep: touchscreen-sleep-state {
+		touchscreen-interrupt-pins {
+			pins = "gpio65";
+			function = "gpio";
+			drive-strength = <2>;
+			bias-pull-down;
+		};
+
+		touchscreen-reset-pins {
+			pins = "gpio64";
+			function = "gpio";
+			drive-strength = <2>;
+			bias-pull-down;
 		};
 	};
 };
