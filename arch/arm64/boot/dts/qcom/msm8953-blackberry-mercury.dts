@@ -506,6 +506,28 @@
 	snps,hsphy_interface = "utmi";
 };
 
+&wcnss {
+	firmware-name = "qcom/msm8953/blackberry/mercury/wcnss.mdt";
+	vddpx-supply = <&pm8953_l5>;
+
+	status = "okay";
+};
+
+&wcnss_ctrl {
+	firmware-name = "qcom/msm8953/blackberry/mercury/WCNSS_qcom_wlan_nv.bin";
+};
+
+&wcnss_iris {
+	compatible = "qcom,wcn3660b";
+
+	vddxo-supply = <&pm8953_l7>;
+	vddrfa-supply = <&pm8953_l19>;
+	vddpa-supply = <&pm8953_l9>;
+	vdddig-supply = <&pm8953_l5>;
+
+	status = "okay";
+};
+
 &zap_shader {
 	firmware-name = "qcom/msm8953/blackberry/mercury/a506_zap.mdt";
 };
