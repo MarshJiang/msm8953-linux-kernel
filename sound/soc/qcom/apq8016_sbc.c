@@ -30,6 +30,8 @@ struct apq8016_sbc_data {
 	struct snd_soc_jack jack;
 	bool jack_setup;
 	bool use_ibit_clk;
+	bool primary_mclk_output;
+	int primary_mclk_count;
 	int mi2s_clk_count[MI2S_COUNT];
 };
 
@@ -69,8 +71,10 @@ static int apq8016_dai_init(struct snd_soc_pcm_runtime *rtd, int mi2s)
 
 	switch (mi2s) {
 	case MI2S_PRIMARY:
-		writel(readl(pdata->spkr_iomux) | SPKR_CTL_PRI_WS_SLAVE_SEL_11,
-			pdata->spkr_iomux);
+		value = readl(pdata->spkr_iomux) | SPKR_CTL_PRI_WS_SLAVE_SEL_11;
+		if (pdata->primary_mclk_output)
+			value |= SPKR_CTL_TLMM_MCLK_EN;
+		writel(value, pdata->spkr_iomux);
 		break;
 
 	case MI2S_QUATERNARY:
@@ -230,28 +234,53 @@ static int msm8916_qdsp6_startup(struct snd_pcm_substream *substream)
 	struct apq8016_sbc_data *data = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
 	struct snd_soc_dai *codec_dai = snd_soc_rtd_to_codec(rtd, 0);
+	bool primary_mclk;
+	bool first_mi2s;
 	int mi2s, ret;
 
 	mi2s = qdsp6_dai_get_lpass_id(cpu_dai);
 	if (mi2s < 0)
 		return mi2s;
 
-	if (++data->mi2s_clk_count[mi2s] > 1)
-		return 0;
-
-
 	/* HACK For making external codecs work
 	 *
 	 * For some codecs in the Quinary DAI link we have to explicitly set the
 	 * format to I2S.
 	 */
-	if (cpu_dai->id == QUINARY_MI2S_RX) {
+	if (cpu_dai->id == QUINARY_MI2S_RX)
 		snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_BC_FC | SND_SOC_DAIFMT_I2S);
+
+	first_mi2s = ++data->mi2s_clk_count[mi2s] == 1;
+	if (first_mi2s) {
+		ret = snd_soc_dai_set_sysclk(cpu_dai,
+					     qdsp6_get_bit_clk_id(data, mi2s),
+					     MI2S_BCLK_RATE, 0);
+		if (ret) {
+			data->mi2s_clk_count[mi2s]--;
+			dev_err(card->dev,
+				"Failed to enable LPAIF bit clk: %d\n", ret);
+			return ret;
+		}
 	}
 
-	ret = snd_soc_dai_set_sysclk(cpu_dai, qdsp6_get_bit_clk_id(data, mi2s), MI2S_BCLK_RATE, 0);
-	if (ret)
-		dev_err(card->dev, "Failed to enable LPAIF bit clk: %d\n", ret);
+	primary_mclk = data->primary_mclk_output && mi2s == MI2S_PRIMARY &&
+			       substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+	if (!primary_mclk || ++data->primary_mclk_count > 1)
+		return 0;
+
+	ret = snd_soc_dai_set_sysclk(cpu_dai, Q6AFE_LPASS_CLK_ID_MCLK_1,
+				     DEFAULT_MCLK_RATE,
+				     SNDRV_PCM_STREAM_PLAYBACK);
+	if (!ret)
+		return 0;
+
+	data->primary_mclk_count--;
+	data->mi2s_clk_count[mi2s]--;
+	if (first_mi2s)
+		snd_soc_dai_set_sysclk(cpu_dai,
+				       qdsp6_get_bit_clk_id(data, mi2s), 0, 0);
+	dev_err(card->dev, "Failed to enable primary MCLK: %d\n", ret);
+
 	return ret;
 }
 
@@ -261,11 +290,23 @@ static void msm8916_qdsp6_shutdown(struct snd_pcm_substream *substream)
 	struct snd_soc_card *card = rtd->card;
 	struct apq8016_sbc_data *data = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
+	bool primary_mclk;
 	int mi2s, ret;
 
 	mi2s = qdsp6_dai_get_lpass_id(cpu_dai);
 	if (mi2s < 0)
 		return;
+
+	primary_mclk = data->primary_mclk_output && mi2s == MI2S_PRIMARY &&
+			       substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+	if (primary_mclk && --data->primary_mclk_count == 0) {
+		ret = snd_soc_dai_set_sysclk(cpu_dai,
+					     Q6AFE_LPASS_CLK_ID_MCLK_1, 0,
+					     SNDRV_PCM_STREAM_PLAYBACK);
+		if (ret)
+			dev_err(card->dev,
+				"Failed to disable primary MCLK: %d\n", ret);
+	}
 
 	if (--data->mi2s_clk_count[mi2s] > 0)
 		return;
@@ -351,6 +392,9 @@ static int apq8016_sbc_platform_probe(struct platform_device *pdev)
 	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
+
+	data->primary_mclk_output =
+		of_property_read_bool(dev->of_node, "qcom,primary-mclk-output");
 
 	card = &data->card;
 	card->dev = dev;
