@@ -15,16 +15,31 @@ properties:
     enum:
       - qcom,apq8016-sbc-sndcard
       - qcom,msm8916-qdsp6-sndcard
+      - qcom,msm8953-qdsp6-sndcard
+
+  qcom,primary-mclk-output:
+    type: boolean
+    description:
+      Generate the 9.6 MHz primary MI2S master clock and route it to the
+      TLMM MCLK pin for an auxiliary codec or amplifier.
 
   reg:
+    minItems: 2
+    maxItems: 4
     items:
       - description: Microphone I/O mux register address
       - description: Speaker I/O mux register address
+      - description: Primary MI2S I/O mux register address
+      - description: Quinary MI2S I/O mux register address
 
   reg-names:
+    minItems: 2
+    maxItems: 4
     items:
       - const: mic-iomux
       - const: spkr-iomux
+      - const: pri-iomux
+      - const: quin-iomux
 
   audio-routing:
     $ref: /schemas/types.yaml#/definitions/non-unique-string-array
@@ -99,6 +114,24 @@ patternProperties:
       - cpu
 
     additionalProperties: false
+
+allOf:
+  - if:
+      properties:
+        compatible:
+          const: qcom,msm8953-qdsp6-sndcard
+    then:
+      properties:
+        reg:
+          minItems: 4
+        reg-names:
+          minItems: 4
+    else:
+      properties:
+        reg:
+          maxItems: 2
+        reg-names:
+          maxItems: 2
 
 required:
   - compatible
