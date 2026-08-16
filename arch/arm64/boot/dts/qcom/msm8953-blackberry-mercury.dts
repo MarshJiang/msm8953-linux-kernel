@@ -169,6 +169,23 @@
 	};
 };
 
+&i2c_2 {
+	clock-frequency = <400000>;
+	status = "okay";
+
+	speaker_amp: amplifier@e {
+		compatible = "qcom,wsa881x-i2c";
+		reg = <0x0e>, <0x44>;
+		reg-names = "digital", "analog";
+		reset-gpios = <&tlmm 96 GPIO_ACTIVE_LOW>;
+		vdd-supply = <&pm8953_l5>;
+		pinctrl-names = "active", "sleep";
+		pinctrl-0 = <&wsa_clk_active>;
+		pinctrl-1 = <&wsa_clk_sleep>;
+		sound-name-prefix = "SpkrMono";
+	};
+};
+
 &i2c_8 {
 	clock-frequency = <400000>;
 
@@ -226,6 +243,12 @@
 				   MATRIX_KEY(5, 2, KEY_RIGHTSHIFT)>;
 		wakeup-source;
 	};
+};
+
+&lpass {
+	firmware-name = "postmarketos/adsp.mdt";
+
+	status = "okay";
 };
 
 &mdss {
@@ -421,8 +444,49 @@
 	status = "okay";
 };
 
+&sound_card {
+	model = "blackberry-mercury";
+	qcom,primary-mclk-output;
+	aux-devs = <&speaker_amp>;
+	audio-routing =
+		"AMIC1", "MIC BIAS External1",
+		"AMIC2", "MIC BIAS External2",
+		"AMIC3", "MIC BIAS External1",
+		"MM_DL1", "MultiMedia1 Playback",
+		"MM_DL3", "MultiMedia3 Playback",
+		"MM_DL4", "MultiMedia4 Playback",
+		"MultiMedia2 Capture", "MM_UL2",
+		"SpkrMono WSA_IN", "LINEOUT_OUT";
+
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&cdc_pdm_lines_act
+		     &cdc_pdm_lines_2_act
+		     &cdc_pdm_comp_lines_act>;
+	pinctrl-1 = <&cdc_pdm_lines_sus
+		     &cdc_pdm_lines_2_sus
+		     &cdc_pdm_comp_lines_sus>;
+
+	status = "okay";
+};
+
 &tlmm {
 	gpio-reserved-ranges = <0 4>, <135 4>;
+
+	wsa_clk_active: wsa-clk-active-state {
+		pins = "gpio25";
+		function = "pri_mi2s_mclk_a";
+		drive-strength = <8>;
+		bias-disable;
+		output-high;
+	};
+
+	wsa_clk_sleep: wsa-clk-sleep-state {
+		pins = "gpio25";
+		function = "pri_mi2s_mclk_a";
+		drive-strength = <2>;
+		bias-pull-down;
+		output-low;
+	};
 
 	pmx_mdss_default: pmx-mdss-default-state {
 		pins = "gpio61";
@@ -504,6 +568,17 @@
 &usb3_dwc3 {
 	dr_mode = "peripheral";
 	snps,hsphy_interface = "utmi";
+};
+
+&wcd_codec {
+	qcom,hphl-jack-type-normally-open;
+	qcom,micbias2-ext-cap;
+
+	vdd-cdc-io-supply = <&pm8953_l5>;
+	vdd-cdc-tx-rx-cx-supply = <&pm8953_s4>;
+	vdd-micbias-supply = <&pm8953_l13>;
+
+	status = "okay";
 };
 
 &wcnss {
