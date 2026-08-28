@@ -80,9 +80,19 @@
 	};
 
 	reserved-memory {
+		/delete-node/ rmtfs@f2d00000;
+
 		other_ext_mem: other@85300000 {
 			reg = <0x0 0x85300000 0x0 0x800000>;
 			no-map;
+		};
+
+		rmtfs@f2d00000 {
+			compatible = "qcom,rmtfs-mem";
+			reg = <0x0 0xf2d00000 0x0 0x200000>;
+			no-map;
+
+			qcom,client-id = <1>;
 		};
 
 		cont_splash_mem: cont-splash@90001000 {
@@ -252,6 +262,16 @@
 };
 
 &mdss {
+	status = "okay";
+};
+
+&mpss {
+	firmware-name = "qcom/msm8953/blackberry/mercury/mba.mbn",
+			"qcom/msm8953/blackberry/mercury/modem.mdt";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uim1_present &uim2_present>;
+	pll-supply = <&pm8953_l7>;
+
 	status = "okay";
 };
 
@@ -518,6 +538,20 @@
 			drive-strength = <2>;
 			bias-pull-up;
 		};
+	};
+
+	uim1_present: uim1-present-state {
+		pins = "gpio54";
+		function = "uim1_present";
+		drive-strength = <2>;
+		bias-pull-up;
+	};
+
+	uim2_present: uim2-present-state {
+		pins = "gpio58";
+		function = "uim2_present";
+		drive-strength = <2>;
+		bias-pull-up;
 	};
 
 	touchscreen_default: touchscreen-default-state {
